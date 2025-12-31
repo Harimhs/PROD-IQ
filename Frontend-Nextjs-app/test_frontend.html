@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROD-IQ Chat Interface</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Header with Tool Buttons */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .tool-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tool-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid transparent;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tool-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .tool-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255,255,255,0.4);
+        }
+        
+        .tool-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            display: none;
+        }
+        
+        .tool-btn.active .tool-indicator {
+            display: block;
+        }
+        
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #1a1a1a;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message.user {
+            align-items: flex-end;
+        }
+        
+        .message.assistant {
+            align-items: flex-start;
+        }
+        
+        .message-header {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tool-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .message-content {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+        
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+        
+        .message.assistant .message-content {
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 1px solid #3a3a3a;
+        }
+        
+        /* Input Area */
+        .input-area {
+            background: #1a1a1a;
+            padding: 20px;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .input-box {
+            flex: 1;
+            background: #2a2a2a;
+            border: 2px solid #3a3a3a;
+            border-radius: 12px;
+            padding: 15px;
+            color: #e0e0e0;
+            font-size: 15px;
+            resize: none;
+            font-family: inherit;
+            max-height: 120px;
+        }
+        
+        .input-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 15px;
+            transition: transform 0.2s;
+        }
+        
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Chart button styling */
+        .chart-btn {
+            margin: 10px 0;
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .chart-btn:hover:not(:disabled) {
+            background: #45a049;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+
+        .chart-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Chart container */
+        .chart-container {
+            margin: 15px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 15px;
+        }
+
+        /* Chart wrapper */
+        .chart-container > div {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .chart-container > div:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        /* Chart images */
+        .chart-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        /* Chart captions */
+        .chart-container p {
+            text-align: center;
+            margin: 8px 0 0 0;
+            font-size: 11px;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Loading Indicator */
+        .loading {
+            display: flex;
+            gap: 5px;
+            padding: 15px;
+        }
+        
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        /* Scrollbar Styling */
+        .chat-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-area::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        .chat-area::-webkit-scrollbar-thumb {
+            background: #3a3a3a;
+            border-radius: 4px;
+        }
+        
+        .chat-area::-webkit-scrollbar-thumb:hover {
+            background: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 PROD-IQ</h1>
+            <div class="tool-buttons">
+                <button class="tool-btn" id="journeyBtn" onclick="toggleTool('journey_simulator')">
+                    <span class="tool-indicator"></span>
+                    📖 Journey Simulator
+                </button>
+                <button class="tool-btn" id="competitorBtn" onclick="toggleTool('competitor_analysis')">
+                    <span class="tool-indicator"></span>
+                    🔍 Competitor Analysis
+                </button>
+            </div>
+        </div>
+        
+        <div class="chat-area" id="chatArea">
+            <div class="message assistant">
+                <div class="message-header">PROD-IQ Assistant</div>
+                <div class="message-content">
+                    👋 Hey! I'm PROD-IQ, your AI startup analyst. Ask me about your metrics, predictions, or use the tools above for deep dives.
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <textarea 
+                class="input-box" 
+                id="userInput" 
+                placeholder="Ask about your startup metrics..."
+                rows="1"
+                onkeydown="handleKeyPress(event)"
+            ></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+    
+    <script>
+    const API_URL = 'http://localhost:5000';
+    let activeTool = null;
+    let chatHistory = [];
+    let sessionId = 'session_' + Date.now();
+    
+    function toggleTool(toolName) {
+        if (activeTool === toolName) {
+            activeTool = null;
+            document.getElementById('journeyBtn').classList.remove('active');
+            document.getElementById('competitorBtn').classList.remove('active');
+        } else {
+            activeTool = toolName;
+            document.getElementById('journeyBtn').classList.remove('active');
+            document.getElementById('competitorBtn').classList.remove('active');
+            
+            if (toolName === 'journey_simulator') {
+                document.getElementById('journeyBtn').classList.add('active');
+            } else if (toolName === 'competitor_analysis') {
+                document.getElementById('competitorBtn').classList.add('active');
+            }
+        }
+        
+        const input = document.getElementById('userInput');
+        if (activeTool === 'journey_simulator') {
+            input.placeholder = '📖 Journey mode active - Ask about your possible futures...';
+        } else if (activeTool === 'competitor_analysis') {
+            input.placeholder = '🔍 Competitor mode active - Ask about competition...';
+        } else {
+            input.placeholder = 'Ask about your startup metrics...';
+        }
+    }
+    
+    function handleKeyPress(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    }
+    
+    function addMessage(role, content, tools) {
+        const chatArea = document.getElementById('chatArea');
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${role}`;
+        
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'message-header';
+        headerDiv.textContent = role === 'user' ? 'You' : 'PROD-IQ Assistant';
+        
+        if (tools && Array.isArray(tools) && tools.length > 0) {
+            tools.forEach(tool => {
+                const badge = document.createElement('span');
+                badge.className = 'tool-badge';
+                badge.textContent = tool.replace('_', ' ').toUpperCase();
+                headerDiv.appendChild(badge);
+            });
+        } else if (tools && typeof tools === 'string') {
+            const badge = document.createElement('span');
+            badge.className = 'tool-badge';
+            badge.textContent = tools.replace('_', ' ').toUpperCase();
+            headerDiv.appendChild(badge);
+        }
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.innerHTML = formatMessage(content);
+        
+        messageDiv.appendChild(headerDiv);
+        messageDiv.appendChild(contentDiv);
+        chatArea.appendChild(messageDiv);
+        
+        chatArea.scrollTop = chatArea.scrollHeight;
+        
+        return messageDiv; // ✅ Return element for chart button attachment
+    }
+    
+    async function sendMessage() {
+        const userInput = document.getElementById('userInput').value.trim();
+        if (!userInput) return;
+
+        // Clear input
+        document.getElementById('userInput').value = '';
+        document.getElementById('userInput').style.height = 'auto';
+
+        // Add user message to chat
+        addMessage('user', userInput, activeTool);
+
+        // Show loading
+        addLoadingIndicator();
+
+        try {
+            console.log('📤 Sending request:', {
+                user_input: userInput,
+                active_tool: activeTool,
+                chat_history: chatHistory,
+                session_id: sessionId
+            });
+
+            const response = await fetch(`${API_URL}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_input: userInput,
+                    active_tool: activeTool || null,
+                    chat_history: chatHistory,
+                    session_id: sessionId
+                })
+            });
+
+            // ✅ Parse JSON only once
+            const result = await response.json();
+            console.log('📥 Received response:', result);
+
+            // Remove loading
+            removeLoadingIndicator();
+
+            if (result.success) {
+                const assistantMessage = result.response;
+                
+                // Add assistant message and get element reference
+                const msgElement = addMessage('assistant', assistantMessage, result.tools_called);
+                
+                // ✅ Check for Python code blocks in special tools
+                if (activeTool && (activeTool === 'journey_simulator' || activeTool === 'competitor_analysis')) {
+                    const hasCodeBlocks = assistantMessage.includes('```python');
+                    
+                    if (hasCodeBlocks) {
+                        // Add "Generate Charts" button
+                        const chartBtn = document.createElement('button');
+                        chartBtn.textContent = '📊 Generate Charts';
+                        chartBtn.className = 'chart-btn';
+                        
+                        chartBtn.onclick = async () => {
+                            chartBtn.textContent = '⏳ Generating...';
+                            chartBtn.disabled = true;
+                            
+                            try {
+                                const chartResponse = await fetch(`${API_URL}/generate_charts`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ response: assistantMessage })
+                                });
+                                
+                                const chartResult = await chartResponse.json();
+                                
+                                if (chartResult.success && chartResult.charts && chartResult.charts.length > 0) {
+                                    // Create chart container
+                                    const chartContainer = document.createElement('div');
+                                    chartContainer.className = 'chart-container';
+                                    
+                                    // Add each chart image
+                                    chartResult.charts.forEach(chart => {
+                                        const imgWrapper = document.createElement('div');
+                                        
+                                        const img = document.createElement('img');
+                                        img.src = chart.data;
+                                        img.alt = chart.name;
+                                        
+                                        const caption = document.createElement('p');
+                                        caption.textContent = chart.name.replace('.png', '').replace(/_/g, ' ').toUpperCase();
+                                        
+                                        imgWrapper.appendChild(img);
+                                        imgWrapper.appendChild(caption);
+                                        chartContainer.appendChild(imgWrapper);
+                                    });
+                                    
+                                    // Add charts after the button
+                                    chartBtn.parentElement.appendChild(chartContainer);
+                                    chartBtn.textContent = `✅ ${chartResult.charts.length} Charts Generated`;
+                                    chartBtn.style.background = '#888';
+                                    
+                                } else {
+                                    chartBtn.textContent = '❌ No Charts Generated';
+                                    chartBtn.style.background = '#f44336';
+                                    console.error('Chart generation failed:', chartResult);
+                                }
+                            } catch (error) {
+                                console.error('Chart generation error:', error);
+                                chartBtn.textContent = '❌ Generation Error';
+                                chartBtn.style.background = '#f44336';
+                            }
+                        };
+                        
+                        // Append button to message content
+                        const contentDiv = msgElement.querySelector('.message-content');
+                        contentDiv.appendChild(chartBtn);
+                    } else {
+                        console.log('ℹ️ No Python code blocks found in response');
+                    }
+                }
+                
+                // Update conversation history
+                chatHistory.push({
+                    user: userInput,
+                    assistant: assistantMessage,
+                    turn: chatHistory.length + 1
+                });
+
+            } else {
+                addMessage('assistant', `❌ Error: ${result.error}`, null);
+            }
+
+        } catch (error) {
+            removeLoadingIndicator();
+            addMessage('assistant', `❌ Connection error: ${error.message}`, null);
+            console.error('API Error:', error);
+        }
+    }
+    
+    function addLoadingIndicator() {
+        const chatArea = document.getElementById('chatArea');
+        
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'loadingIndicator';
+        loadingDiv.className = 'message assistant';
+        loadingDiv.innerHTML = `
+            <div class="message-header">PROD-IQ Assistant</div>
+            <div class="message-content">
+                <div class="loading">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+            </div>
+        `;
+        
+        chatArea.appendChild(loadingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+    
+    function removeLoadingIndicator() {
+        const loading = document.getElementById('loadingIndicator');
+        if (loading) loading.remove();
+    }
+    
+    function formatMessage(text) {
+        return text
+            .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/###\s(.+)/g, '<h3 style="margin-top: 15px; color: #667eea;">$1</h3>')
+            .replace(/##\s(.+)/g, '<h2 style="margin-top: 20px; color: #667eea;">$1</h2>')
+            .replace(/⚠️/g, '<span style="color: #ff9800;">⚠️</span>')
+            .replace(/✅/g, '<span style="color: #4caf50;">✅</span>')
+            .replace(/\n/g, '<br>');
+    }
+    
+    // Auto-resize textarea
+    document.getElementById('userInput').addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    
+    // Check API health on load
+    window.addEventListener('load', async () => {
+        try {
+            const response = await fetch(`${API_URL}/health`);
+            const data = await response.json();
+            console.log('✅ API Connected:', data.service);
+        } catch (error) {
+            addMessage('assistant', '❌ API Offline - Please start the server with: python api/app.py', null);
+        }
+    });
+</script>
+
+</body>
+</html>
