@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -119,8 +119,10 @@ export default function Chat() {
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [needsExtraPadding, setNeedsExtraPadding] = useState(false);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null); // Ref for the messages div
+  const bottomRef = useRef<HTMLDivElement>(null); // New ref for bottom anchor
   const dropdownRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -230,19 +232,44 @@ export default function Chat() {
         setSpeechSupported(false);
       }
     }
-  }, [isRecording]);
+  }, []);
 
   useEffect(() => {
     checkApiHealth();
   }, []);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      setTimeout(() => {
-        scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 0);
+    setNeedsExtraPadding(isLoading || input.trim().length > 0);
+  }, [isLoading, input]);
+
+  // Improved scroll using scrollIntoView on bottom ref - more reliable for dynamic content
+  useLayoutEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
     }
-  }, [currentConversation?.messages]);
+  }, [currentConversation?.messages, isLoading]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const handleResize = () => {
+        // Re-scroll on viewport resize (keyboard, etc.)
+        setTimeout(() => {
+          if (bottomRef.current) {
+            bottomRef.current.scrollIntoView({
+              behavior: "smooth",
+              block: "end",
+            });
+          }
+        }, 150);
+      };
+      window.visualViewport?.addEventListener("resize", handleResize);
+      return () =>
+        window.visualViewport?.removeEventListener("resize", handleResize);
+    }
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -265,7 +292,7 @@ export default function Chat() {
       setApiStatus("connected");
     } catch (error) {
       console.error(" API Offline:", error);
-      setApiStatus("connected");
+      setApiStatus("disconnected");
     }
   };
 
@@ -500,7 +527,7 @@ export default function Chat() {
     const remaining = conversations.filter((c) => c.id !== id);
     setConversations(remaining);
     if (currentConversationId === id && remaining.length > 0) {
-      setCurrentConversationId(remaining.id);
+      setCurrentConversationId(remaining[0].id);
     } else if (remaining.length === 0) {
       createNewConversation();
     }
@@ -718,7 +745,6 @@ export default function Chat() {
 
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-600/30">
-                {/* <Sparkles className="h-5 w-5" /> */}
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-600/30">
                   <img src="/logo.png" alt="Logo" className="h-5 w-5" />
                 </div>
@@ -765,122 +791,38 @@ export default function Chat() {
           </div>
         </header>
 
-        <ScrollArea className="flex-1">
-          <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full pb-[180px]">
-            {currentConversation?.messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-4 ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                } animate-fade-in`}
-              >
-                {msg.role === "assistant" && (
-                  <Avatar className="h-10 w-10 flex-shrink-0 mt-1 shadow-lg">
-                    <AvatarFallback className="bg-gradient-to-br from-emerald-600 to-teal-600 text-white text-xs font-bold">
-                      <Sparkles className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                )}
+        <ScrollArea className="flex-1" ref={messagesContainerRef}>
+          <div
+            className={`p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full pt-4 ${
+              needsExtraPadding ? "pb-[500px]" : "pb-[250px]"
+            }`}
+          >
+            {currentConversation?.messages.map((message, index) => {
+              const isAssistant = message.role === "assistant";
+              const isLast = index === currentConversation.messages.length - 1;
 
-                <div className="flex flex-col max-w-3xl">
-                  {msg.tools && msg.tools.length > 0 && (
-                    <div className="text-xs mb-2 px-2 flex gap-2">
-                      {msg.tools.map((tool, idx) => (
-                        <span
-                          key={idx}
-                          className={`backdrop-blur-sm px-3 py-1 rounded-full border font-medium ${
-                            isDark
-                              ? "bg-emerald-600/20 text-emerald-400 border-emerald-600/30"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          }`}
-                        >
-                          {tool.replace("_", " ").toUpperCase()}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
+              return (
+                <div
+                  key={message.id}
+                  className={`flex w-full mb-3 ${
+                    isAssistant ? "justify-start" : "justify-end"
+                  }`}
+                >
                   <div
-                    className={`rounded-2xl px-5 py-4 transition-all duration-300 ${
-                      msg.role === "user"
-                        ? "bg-emerald-600 text-white shadow-xl shadow-emerald-600/20"
-                        : isDark
-                        ? "backdrop-blur-xl bg-slate-800/50 text-slate-100 border border-slate-700 shadow-lg"
-                        : "backdrop-blur-xl bg-white text-slate-900 border border-slate-200 shadow-lg"
-                    }`}
+                    className={`relative max-w-[70%] rounded-2xl px-4 py-3 text-sm
+                    ${
+                      isAssistant
+                        ? "bg-slate-800 text-slate-100"
+                        : "bg-emerald-600 text-white"
+                    }
+                    break-words whitespace-pre-wrap overflow-hidden
+                    ${isAssistant && isLast ? "animate-fade-in" : ""}`}
                   >
-                    <div
-                      className="text-sm leading-relaxed prose prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: formatMessage(msg.content),
-                      }}
-                    />
-
-                    {msg.hasCharts && msg.role === "assistant" && (
-                      <div className="mt-4">
-                        <Button
-                          size="sm"
-                          className={`rounded-xl transition-all duration-300 ${
-                            chartData[msg.id]
-                              ? "bg-emerald-700 hover:bg-emerald-800"
-                              : "bg-emerald-600 hover:bg-emerald-700"
-                          } text-white shadow-lg shadow-emerald-600/30`}
-                          onClick={() => generateCharts(msg.id, msg.content)}
-                          disabled={
-                            generatingCharts[msg.id] || !!chartData[msg.id]
-                          }
-                        >
-                          {generatingCharts[msg.id]
-                            ? "⏳ Generating..."
-                            : chartData[msg.id]
-                            ? `✅ ${chartData[msg.id].length} Charts Generated`
-                            : "📊 Generate Charts"}
-                        </Button>
-
-                        {chartData[msg.id] && (
-                          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {chartData[msg.id].map((chart, idx) => (
-                              <div
-                                key={idx}
-                                className={`backdrop-blur-xl rounded-2xl p-4 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 ${
-                                  isDark
-                                    ? "bg-slate-800/50 border border-slate-700"
-                                    : "bg-white border border-slate-200"
-                                }`}
-                              >
-                                <img
-                                  src={chart.data}
-                                  alt={chart.name}
-                                  className="w-full h-auto rounded-xl"
-                                />
-                                <p
-                                  className={`text-xs text-center mt-3 font-semibold uppercase tracking-wider ${
-                                    isDark ? "text-slate-400" : "text-slate-600"
-                                  }`}
-                                >
-                                  {chart.name
-                                    .replace(".png", "")
-                                    .replace(/_/g, " ")}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {message.content}
                   </div>
                 </div>
-
-                {msg.role === "user" && (
-                  <Avatar className="h-10 w-10 flex-shrink-0 mt-1 shadow-lg">
-                    <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback className="bg-gradient-to-br from-slate-600 to-slate-700 text-white">
-                      U
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             {isLoading && (
               <div className="flex gap-4 animate-fade-in">
@@ -908,16 +850,21 @@ export default function Chat() {
                 </div>
               </div>
             )}
-            <div ref={scrollRef} />
+
+            {/* Bottom anchor for reliable scrolling */}
+            <div ref={bottomRef} className="h-0" />
           </div>
         </ScrollArea>
 
         <div
-          className={`backdrop-blur-xl p-4 fixed bottom-0 right-0 left-0 md:left-16 transition-all duration-300 z-20 mb-[40px] ${
-            isDark ? "" : ""
-          } ${sidebarOpen ? "md:left-72" : "md:left-16"}`}
+          className={`backdrop-blur-xl p-4 fixed bottom-0 right-0 left-0 md:left-16 transition-all duration-300 z-20 ${
+            sidebarOpen ? "md:left-72" : "md:left-16"
+          }`}
         >
-          <div className="max-w-5xl mx-auto">
+          <div
+            className="max-w-5xl mx-auto"
+            style={{ minHeight: "100px", maxHeight: "110px" }}
+          >
             {selectedTool && (
               <div className="mb-2 flex items-center gap-2">
                 <div
@@ -946,25 +893,24 @@ export default function Chat() {
                     ? "bg-slate-800/50 border-slate-700 focus-within:border-emerald-600"
                     : "bg-white border-slate-300 focus-within:border-emerald-500"
                 }`}
-                style={{ height: "125px" }}
               >
                 <div className="relative flex-shrink-0" ref={dropdownRef}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
+                  <button
+                    type="button"
                     onClick={() => setToolDropdownOpen(!toolDropdownOpen)}
-                    className={`rounded-xl transition-all duration-200 ${
-                      isDark ? "hover:bg-slate-700" : "hover:bg-slate-100"
-                    } ${
-                      toolDropdownOpen
-                        ? isDark
-                          ? "bg-slate-700"
-                          : "bg-slate-100"
-                        : ""
-                    }`}
+                    className="h-[90px] flex items-center px-2" // match textarea height
                   >
-                    <Wrench className="h-5 w-5" />
-                  </Button>
+                    <div
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-700/70 bg-slate-900/60 px-3 py-1 text-xs font-medium text-slate-200"
+                    >
+                      <img
+                        src="/icons/page_info.svg"
+                        alt="Gemini tools"
+                        className="w-4 h-4 invert"
+                      />
+                      <span>Tools</span>
+                    </div>
+                  </button>
 
                   {/* Dropdown Menu */}
                   {toolDropdownOpen && (
@@ -1047,20 +993,29 @@ export default function Chat() {
                       handleSendMessage();
                     }
                   }}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      if (bottomRef.current) {
+                        bottomRef.current.scrollIntoView({
+                          behavior: "smooth",
+                          block: "end",
+                        });
+                      }
+                    }, 100);
+                  }}
                   placeholder={
                     isRecording ? "🎤 Listening..." : getPlaceholder()
                   }
-                  className={`flex-1 resize-none border-0 bg-transparent focus:outline-none px-3 ${
+                  className={`flex-1 resize-none border-0 bg-transparent focus:outline-none px-3 h-[90px] overflow-y-auto ${
                     isDark
                       ? "text-slate-100 placeholder:text-slate-500"
                       : "text-slate-900 placeholder:text-slate-500"
                   }`}
                   data-testid="input-message"
-                  style={{ height: "84px" }}
                 />
 
                 {/* Voice and Send buttons */}
-                <div className="flex-shrink-0 flex gap-2">
+                <div className="flex-shrink-0 flex gap-2 pr-[5px]">
                   <Button
                     variant="ghost"
                     size="icon"
