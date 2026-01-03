@@ -214,9 +214,9 @@ export default function Home() {
               <img src="/logo.png" alt="Logo" className="h-5 w-5" />
             </div>
             <span className="font-bold text-lg tracking-tight">ProdIQ</span>
-            <Badge className="ml-2 bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 rounded-full px-2.5 py-0.5">
+            {/* <Badge className="ml-2 bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 rounded-full px-2.5 py-0.5">
               Beta 0.0
-            </Badge>
+            </Badge> */}
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium dark:text-slate-400 light:text-slate-600">
             <a href="#features" className="hover:text-emerald-500 transition-colors">
@@ -284,13 +284,13 @@ export default function Home() {
       <section className="relative z-10 pt-40 pb-20 md:pt-56 md:pb-32 container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           <div className="max-w-2xl">
-            <Badge
+            {/* <Badge
               variant="outline"
               className="mb-6 rounded-full border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-4 py-1.5 hover:bg-amber-500/15 transition-colors"
             >
               <AlertCircle className="w-3.5 h-3.5 mr-2" />
               Beta Version 0.0 - Early Access
-            </Badge>
+            </Badge> */}
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 leading-[1.1]">
               Analyze Your <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-400">
@@ -300,14 +300,14 @@ export default function Home() {
             <p className="text-xl dark:text-slate-400 light:text-slate-600 mb-10 leading-relaxed max-w-lg">
               Get instant insights on product performance, market positioning, pricing strategy, and competitive advantages. See how ProdIQ can transform your product decisions.
             </p>
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-8">
+            {/* <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-8">
               <p className="text-sm text-amber-900 dark:text-amber-200 flex items-start gap-2">
                 <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span>
                   <span className="font-semibold">Please note:</span> Responses may take up to 3 minutes due to current resource constraints as we scale the infrastructure.
                 </span>
               </p>
-            </div>
+            </div> */}
             <div className="flex flex-wrap items-center gap-4">
               <Button
                 size="lg"
@@ -708,7 +708,7 @@ export default function Home() {
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <span className="font-bold text-lg">ProdIQ</span>
-              <Badge className="text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30">Beta</Badge>
+              {/* <Badge className="text-xs bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30">Beta</Badge> */}
             </div>
             <p className="text-sm dark:text-slate-400 light:text-slate-600">
               AI-powered product analysis for smarter decisions.

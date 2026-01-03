@@ -133,3 +133,7 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+.icon-white {
+  filter: invert(1);
+}
